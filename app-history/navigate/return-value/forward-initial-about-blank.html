@@ -1,0 +1,22 @@
+<!doctype html>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="resources/helpers.js"></script>
+
+<body>
+<script>
+promise_test(async t => {
+  let i = document.createElement("iframe");
+  document.body.append(i);
+
+  i.contentWindow.appHistory.onnavigate = t.unreached_func("onnavigate should not be called");
+  i.contentWindow.appHistory.onnavigatesuccess = t.unreached_func("onnavigatesuccess should not be called");
+  i.contentWindow.appHistory.onnavigateerror = t.unreached_func("onnavigateerror should not be called");
+
+  i.contentWindow.location.href = "about:blank#1";
+  history.back();
+  await new Promise(resolve => i.contentWindow.onhashchange = resolve);
+
+  await assertBothRejectDOM(t, i.contentWindow.appHistory.forward(), "InvalidStateError", i.contentWindow);
+}, "forward() in initial about:blank document");
+</script>

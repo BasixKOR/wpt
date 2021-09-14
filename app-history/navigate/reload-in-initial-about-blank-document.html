@@ -11,7 +11,7 @@ promise_test(async t => {
   i.contentWindow.appHistory.onnavigatesuccess = t.unreached_func('onnavigatesuccess should not be called');
   i.contentWindow.appHistory.onnavigateerror = t.unreached_func('onnavigateerror should not be called');
   let promise_settled = false;
-  i.contentWindow.appHistory.reload()
+  i.contentWindow.appHistory.reload().committed
       .finally(() => promise_settled = true);
   await new Promise(resolve => i.onload = resolve);
   await new Promise(resolve => t.step_timeout(resolve, 0));
