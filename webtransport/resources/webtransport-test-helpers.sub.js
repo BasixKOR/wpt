@@ -12,7 +12,7 @@ function webtransport_url(handler) {
 
 // Decode all chunks in a given ReadableStream.
 async function read_stream_as_json(stream) {
-  const decoder = new TextDecoderStream('utf-8');
+  const decoder = new TextDecoderStream();
   const decode_stream = stream.readable.pipeThrough(decoder);
   const reader = decode_stream.getReader();
 
@@ -27,6 +27,24 @@ async function read_stream_as_json(stream) {
   reader.releaseLock();
 
   return JSON.parse(chunks);
+}
+
+async function read_stream(stream) {
+  const decoder = new TextDecoderStream();
+  const decode_stream = stream.readable.pipeThrough(decoder);
+  const reader = decode_stream.getReader();
+
+  let chunks = '';
+  while (true) {
+    const {value: chunk, done} = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks += chunk;
+  }
+  reader.releaseLock();
+
+  return chunks;
 }
 
 // Check the standard request headers and delete them, leaving any "unique"
