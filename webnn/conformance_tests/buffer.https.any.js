@@ -82,15 +82,15 @@ const testCreateWebNNBuffer = (testName, bufferDescriptor) => {
       throw new AssertionError(
           `Unable to create context for ${variant} variant. ${e}`);
     }
-
-    try {
-      const mlBuffer = await mlContext.createBuffer(bufferDescriptor);
-    } catch (e) {
-      throw new AssertionError(
-          `Unable to create buffer for ${variant} variant. ${e}`);
-    }
   });
-  promise_test(async () => {
+  promise_test(async t => {
+    if (!mlContext.opSupportLimits().input.dataTypes.includes(
+            bufferDescriptor.dataType)) {
+      await promise_rejects_js(
+          t, TypeError, mlContext.createBuffer(bufferDescriptor));
+      return;
+    }
+
     const mlBuffer = await mlContext.createBuffer(bufferDescriptor);
     assert_equals(
         mlBuffer.dataType, bufferDescriptor.dataType,
@@ -115,14 +115,6 @@ const testCreateWebNNBufferFails = (testName, bufferDescriptor) => {
     } catch (e) {
       throw new AssertionError(
           `Unable to create context for ${variant} variant. ${e}`);
-    }
-
-    try {
-      const mlBuffer =
-          await mlContext.createBuffer({dataType: 'int32', dimensions: [2, 3]});
-    } catch (e) {
-      throw new AssertionError(
-          `Unable to create buffer for ${variant} variant. ${e}`);
     }
   });
   promise_test(async t => {
@@ -273,7 +265,20 @@ const testReadWebNNBuffer = (testName) => {
 
     await promise_rejects_dom(
         t, 'InvalidStateError', mlContext.readBuffer(mlBuffer));
-  }, `${testName} / destroy`);
+  }, `${testName} / read_after_destroy`);
+
+  promise_test(async t => {
+    let mlBuffer =
+        await mlContext.createBuffer({dataType: 'int32', dimensions: [2, 3]});
+
+    let promise = mlContext.readBuffer(mlBuffer);
+    let anotherPromise = mlContext.readBuffer(mlBuffer);
+
+    mlBuffer.destroy();
+
+    await promise_rejects_dom(t, 'InvalidStateError', promise);
+    await promise_rejects_dom(t, 'InvalidStateError', anotherPromise);
+  }, `${testName} / read_before_destroy`);
 
   promise_test(async () => {
     let mlBuffer =
