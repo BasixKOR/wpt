@@ -13,11 +13,15 @@
 
 <meta name=variant content=?method=hover>
 <meta name=variant content=?method=focus>
-<meta name=variant content=?method=long-press>
 
 <button data-testcase="<button>" interesttarget=target>Button</button>
 
 <a data-testcase="<a>" href=foo interesttarget=target>Link</a>
+
+<img src="/images/blue.png" usemap="#map" id=areatarget>
+<map id=map>
+  <area data-testcase="<area>" data-hover="areatarget" interesttarget=target href="/" shape=default>
+</map>
 
 <svg viewBox="0 0 100 100" style="width: 100px" xmlns="http://www.w3.org/2000/svg">
   <a data-testcase="SVG <a>" href=foo interesttarget=target>
@@ -86,7 +90,11 @@ method = urlParams.get('method');
       switch (method) {
         case 'hover':
           preventEvent(cancelTrigger,el,'mouseover');
-          await hoverOver(el);
+          hovertarget = el;
+          if (el.dataset.hover) {
+            hovertarget = document.getElementById(el.dataset.hover);
+          }
+          await hoverOver(hovertarget)
           break;
         case 'focus':
           if (cancelTrigger) {
@@ -94,24 +102,16 @@ method = urlParams.get('method');
           }
           await focusOn(el);
           break;
-        case 'long-press':
-          preventEvent(cancelTrigger,el,'contextmenu');
-          await longPress(el);
-          break;
         default:
           assert_notreached();
       }
       assert_equals(loseInterestCount, 0, 'Lose interest should not be fired yet');
-      if (method === 'long-press') {
-          assert_equals(interestCount, 0, 'Long press doesn\'t fire interest automatically - a menu item must be chosen');
+      if (cancelTrigger) {
+        assert_equals(interestCount, 0, 'Because the trigger event was cancelled, interest should not be fired');
+        assert_false(el.matches(':has-interest'),':has-interest should not match');
       } else {
-        if (cancelTrigger) {
-          assert_equals(interestCount, 0, 'Because the trigger event was cancelled, interest should not be fired');
-          assert_false(el.matches(':has-interest'),':has-interest should not match');
-        } else {
-          assert_equals(interestCount, 1, 'Interest should be fired');
-          assert_true(el.matches(':has-interest'),':has-interest should match');
-        }
+        assert_equals(interestCount, 1, 'Interest should be fired');
+        assert_true(el.matches(':has-interest'),':has-interest should match');
       }
       interestCount = 0;
 
@@ -126,28 +126,19 @@ method = urlParams.get('method');
           }
           await focusOn(otherbutton);
           break;
-        case 'long-press':
-          // Nothing to cancel here
-          await clickOn(otherbutton);
-          break;
         default:
           assert_notreached();
       }
       assert_equals(interestCount, 0, 'No new interest event should be fired');
-      if (method === 'long-press') {
-        assert_equals(loseInterestCount, 0, 'Since interest was never shown, no lose interest either');
-        assert_false(el.matches(':has-interest'),':has-interest should not match');
+      if (cancelTrigger || cancelLose) {
+        assert_equals(loseInterestCount, 0, 'No lose interest event should be fired');
       } else {
-        if (cancelTrigger || cancelLose) {
-          assert_equals(loseInterestCount, 0, 'No lose interest event should be fired');
-        } else {
-          assert_equals(loseInterestCount, 1, 'Lose interest event should be fired');
-        }
-        if (cancelLose) {
-          assert_true(el.matches(':has-interest'),':has-interest should still match because we canceled the triggering event');
-        } else {
-          assert_false(el.matches(':has-interest'),':has-interest should not match');
-        }
+        assert_equals(loseInterestCount, 1, 'Lose interest event should be fired');
+      }
+      if (cancelLose) {
+        assert_true(el.matches(':has-interest'),':has-interest should still match because we canceled the triggering event');
+      } else {
+        assert_false(el.matches(':has-interest'),':has-interest should not match');
       }
     },`Basic behavior, ${description}`);
   });
